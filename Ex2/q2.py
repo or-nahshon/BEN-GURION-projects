@@ -223,7 +223,7 @@ def find_path(starting_locations, goal_locations, search_method, detail_output):
 
     # intertor to one selcted: start-goal
     for i in range(0, len(starting_locations)):
-
+        # my comment
         start = starting_locations[i]
         goal = goal_locations[i]
 
