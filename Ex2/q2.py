@@ -191,8 +191,7 @@ def simulated_annealing(start, goal):
             current_node = next_node
 
         else:
-            P= math.exp((delta-1)/T)
-
+            P= math.exp((delta-1)/T)+0.05
             ran=numpy.random.random()
 
             if ran < P:
@@ -212,10 +211,6 @@ def genetic_algorithm(start, goal):
     pass
 
 
-
-
-
-
 def find_path(starting_locations, goal_locations, search_method, detail_output):
 
     allPathes = []
@@ -223,30 +218,29 @@ def find_path(starting_locations, goal_locations, search_method, detail_output):
 
     # intertor to one selcted: start-goal
     for i in range(0, len(starting_locations)):
-        # my comment
+
         start = starting_locations[i]
         goal = goal_locations[i]
 
         switcher = {
             1: A_star_search,
-            2: lambda : hill_climbing(start, goal),
-            3: lambda : simulated_annealing(start, goal),
-            4: lambda : beam_search(start, goal),
-            5: lambda : genetic_algorithm(start, goal)}
+            2: hill_climbing,
+            3: simulated_annealing,
+            4: beam_search,
+            5: genetic_algorithm}
 
-        path, detailOutputAns = switcher[search_method](start,goal)
+        path, detailOutputAns = switcher[search_method](start, goal)
 
         if path is None:
             # there isnt path
             return print("No path found")
         else:
-            print(path)
             # there is path
             allPathes.append(path)
             detailOutputs.append(detailOutputAns)
 
     if detail_output:
-        printdetailOutputs (detailOutputs, search_method)
+        printdetailOutputs(detailOutputs, search_method)
 
     return print_answer(allPathes)
 
@@ -260,10 +254,13 @@ def printdetailOutputs(details, search_method):
 
     if search_method == 2:
         print("")
+
     if search_method == 3:
         print("")
+
     if search_method == 4:
         print("")
+
     if search_method == 5:
         print("")
 
@@ -438,7 +435,7 @@ if __name__ == "__main__":
     starting_locations = ["Washington County, UT", "Chicot County, AR", "Fairfield County, CT"]
     goal_locations = ["San Diego County, CA", "Bienville Parish, LA", "Rensselaer County, NY"]
 
-    search_method = 1
+    search_method = 3
     detail_output = True
 
     find_path(starting_locations, goal_locations, search_method, detail_output)
