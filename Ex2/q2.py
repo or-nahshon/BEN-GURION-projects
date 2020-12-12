@@ -6,14 +6,12 @@ import pandas as pd
 import numpy
 import copy
 
-
 global path
 path = "adjacency.csv"
 
 
 # class represents a node
 class Node:
-
     # initialize
     def __init__(self, name: str, parent):
         self.name = name
@@ -51,7 +49,7 @@ class Node:
 
     def getNeighborsNotChecked(self, checked):
         neighbors= self.getNeighbors()
-        if not checked:
+        if len(checked) == 0 :
             return neighbors
         return [neig for neig in neighbors if (neig not in checked)]
 
@@ -70,20 +68,26 @@ def print_answer(paths):
 
 
 # find path
-def find_best_neigbhors(node, heuristic, checked=[]):
+def find_best_neigbhors(list_of_nodes, heuristic, checked=[], size=0):
 
     ls=[]
-    neighbors = node.getNeighbors()
-    neighbors_not_checked = node.getNeighborsNotChecked(checked)
-    if len(neighbors_not_checked) > 0:
-        for neighbor in neighbors_not_checked:
-            neighbor_node = Node(neighbor, node)
-            neighbor_node.h = heuristic.get(neighbor_node.country)
-            ls.append(neighbor_node)
-        if len(ls) > 0:
-            list_sorted= sorted(ls,key=lambda n: (len(n.getNeighborsNotChecked(checked)) ))
-            return (sorted(list_sorted, key=lambda n: (-n.h)))
-    return None
+    for node in list_of_nodes:
+        neighbors_not_checked = node.getNeighborsNotChecked(checked)
+        if len(neighbors_not_checked) > 0:
+            for neighbor in neighbors_not_checked:
+                neighbor_node = Node(neighbor, node)
+                neighbor_node.h = heuristic.get(neighbor_node.country)
+                ls.append(neighbor_node)
+    if len(ls) > 0:
+        list_sorted = sorted(ls,key=lambda n: (len(n.getNeighborsNotChecked(checked)) ))
+        list_sorted2 = (sorted(list_sorted, key=lambda n: (-n.h)))
+        if size == 0:
+            return list_sorted2
+        if size == 1:
+            return list_sorted2.pop()
+        return list_sorted2[len(list_sorted2)-(min(size, len(list_sorted2))):]
+
+    return ls
 
 
 
@@ -96,63 +100,40 @@ def hill_climbing(start, goal):
     start_node = Node(start, None)
     goal_node = Node(goal, None)
     heuristic = clculateHeuristics(goal_node.country)
-    neigbhors_for_restart = find_best_neigbhors(start_node, heuristic)
 
-    if start_node == goal_node:
-        return recreate_path(start_node, start_node)
+    current_node = start_node
 
-    checked.append(start_node.name)
-
-    if neigbhors_for_restart is None:
-        return None, None
-
-    current_node = neigbhors_for_restart.pop()
-
-    while number_of_restart <= 5:
+    while number_of_restart <= 5 and current_node:
         if current_node == goal_node:
-
             return recreate_path(current_node, start_node)
 
-        neighbors= find_best_neigbhors(current_node, heuristic, checked)
+        checked.append(current_node.name)
+        best_neigbhor = find_best_neigbhors([current_node], heuristic, checked, size=1)
 
-        if neighbors is None:
+        if not best_neigbhor:
             number_of_restart += 1
             sideways_move = 0
-            try:
-                current_node = neigbhors_for_restart.pop()
-            except:  # list is empty
-                break
+            current_node = find_best_neigbhors([start_node], heuristic, checked, size=1)
 
         else:
-            best_neigbhor = neighbors.pop()
-
             if best_neigbhor.h < current_node.h:
-                checked.append(current_node.name)
                 current_node = best_neigbhor
                 sideways_move = 0
-                continue
 
             elif best_neigbhor.h == current_node.h: #check if KATEF
-                sideways_move+=1
+                sideways_move += 1
 
-                if sideways_move<=max_sideways_move:
-                    checked.append(current_node.name)
+                if sideways_move <= max_sideways_move:
                     current_node = best_neigbhor
-                    continue
                 else:
-                    number_of_restart+=1
-                    sideways_move=0
-                    try:
-                        current_node = neigbhors_for_restart.pop()
-                    except: #list is empty
-                        break
+                    number_of_restart += 1
+                    sideways_move = 0
+                    current_node = find_best_neigbhors([start_node], heuristic, checked, size=1)
+
             else:
                 number_of_restart += 1
                 sideways_move = 0
-                try:
-                    current_node = neigbhors_for_restart.pop()
-                except:  # list is empty
-                    break
+                current_node = find_best_neigbhors([start_node], heuristic, checked, size=1)
 
     return None, None
 
@@ -202,9 +183,58 @@ def simulated_annealing(start, goal):
 
 
 
-def beam_search(start, goal):
-    print("hi beam")
-    pass
+def beam_search(start, goal, k=3):
+    sideways_move=0
+    max_sideways_move=50
+    number_of_restart = 0
+    checked = []
+    start_node = Node(start, None)
+    goal_node = Node(goal, None)
+    heuristic = clculateHeuristics(goal_node.country)
+
+    if start_node==goal_node:
+        return recreate_path(start_node, start_node)
+    checked.append(start_node.name)
+    current_nodes = find_best_neigbhors([start_node], heuristic, checked, size=k)
+
+    while number_of_restart <= 5 and len(current_nodes) != 0:
+
+        if goal_node in current_nodes:
+            for node in current_nodes:
+                if node == goal_node:
+                    return recreate_path(node, start_node)
+
+        for node in current_nodes:
+            checked.append(node.name)
+
+        best_k_neighbhors = find_best_neigbhors(current_nodes, heuristic, checked, size=k)
+
+        if len(best_k_neighbhors) == 0:
+            number_of_restart += 1
+            current_nodes = find_best_neigbhors([start_node], heuristic, checked, size=k)
+            continue
+
+        else:
+            current_nodes_temp=[]
+            for node in best_k_neighbhors:
+                if node.h<node.parent.h:
+                    current_nodes_temp.append(node)
+
+                elif node.h == node.parent.h:
+                    sideways_move +=1
+                    if sideways_move <= max_sideways_move:
+                        current_nodes_temp.append(node)
+
+
+
+                checked.append(node.parent.name)
+
+
+
+            current_nodes = best_k_neighbhors
+
+    return None, None
+
 
 def genetic_algorithm(start, goal):
     print("hi gen")
@@ -435,8 +465,9 @@ if __name__ == "__main__":
     starting_locations = ["Washington County, UT", "Chicot County, AR", "Fairfield County, CT"]
     goal_locations = ["San Diego County, CA", "Bienville Parish, LA", "Rensselaer County, NY"]
 
-    search_method = 3
+    search_method = 4
     detail_output = True
+
 
     find_path(starting_locations, goal_locations, search_method, detail_output)
 
