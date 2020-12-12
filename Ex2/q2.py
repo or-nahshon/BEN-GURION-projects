@@ -49,7 +49,7 @@ class Node:
 
     def getNeighborsNotChecked(self, checked):
         neighbors= self.getNeighbors()
-        if len(checked) == 0 :
+        if not checked :
             return neighbors
         return [neig for neig in neighbors if (neig not in checked)]
 
@@ -96,44 +96,34 @@ def hill_climbing(start, goal):
 
 def simulated_annealing(start, goal):
     t_max=100
-
     goal_node = Node(goal,None)
     heuristic = clculateHeuristics(goal_node.country)
     start_node = Node(start, None)
-    checked=[start]
+    checked=[]
     start_node.h = heuristic.get(start_node.country)
     current_node = start_node
 
     for t in range(t_max):
         if current_node == goal_node:
             return recreate_path(current_node, start_node)
+        checked.append(current_node.name)
+        current_node.h = heuristic.get(current_node.country)
+
         T =1-(t/t_max)
-
         neighbors = current_node.getNeighborsNotChecked(checked)
-        if not len(neighbors):
+
+        if not neighbors:
             break
-        current_node.h = heuristic.get(start_node.country)
+        next_node = Node(neighbors.pop(random.randrange(len(neighbors))), current_node)
+        next_node.h = heuristic.get(next_node.country)
 
-        next = neighbors.pop(random.randrange(len(neighbors)))
-        next_node = Node(next, current_node)
-        try:
-            next_node.h = heuristic.get(start_node.country)
-        except:
-            next_node.h = heuristic.get(start_node.country)
-
-        delta= current_node.h-next_node.h
-
-        if delta > 0:
-
-            checked.append(next)
+        delta = current_node.h-next_node.h
+        if delta >= 0:
             current_node = next_node
-
         else:
-            P= math.exp((delta-1)/T)+0.05
-            ran=numpy.random.random()
-
+            P = math.exp((delta-1)/T)+0.1
+            ran = numpy.random.random()
             if ran < P:
-                checked.append(next)
                 current_node = next_node
 
     return None,None
@@ -193,10 +183,31 @@ def beam_search(start, goal, k=3):
 
     return None, None
 
+def create_population(start, goal):
+    ls=[]
+
+    while len(ls) < 10:
+        ans, d = A_star_search(start, goal)
+        if ans not in ls and ans is not None:
+            ls.append(ans)
+        ans, d = beam_search(start, goal)
+        if ans not in ls and ans is not None:
+            ls.append(ans)
+        ans, d = hill_climbing(start, goal)
+        if ans not in ls and ans is not None:
+            ls.append(ans)
+        ans, d = simulated_annealing(start, goal)
+        if ans not in ls and ans is not None:
+            ls.append(ans)
+        print(len(ls))
+    return ls
 
 def genetic_algorithm(start, goal):
-    print("hi gen")
-    pass
+    population= create_population(start, goal)
+    print("found 10")
+
+
+    return None,None
 
 
 def find_path(starting_locations, goal_locations, search_method, detail_output):
@@ -423,7 +434,7 @@ if __name__ == "__main__":
     starting_locations = ["Washington County, UT", "Chicot County, AR", "Fairfield County, CT"]
     goal_locations = ["San Diego County, CA", "Bienville Parish, LA", "Rensselaer County, NY"]
 
-    search_method = 2
+    search_method = 5
     detail_output = True
 
     find_path(starting_locations, goal_locations, search_method, detail_output)
