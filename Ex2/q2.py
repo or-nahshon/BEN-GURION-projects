@@ -83,8 +83,7 @@ def find_best_neigbhors(list_of_nodes, heuristic, checked=[], size=0):
         list_sorted2 = (sorted(list_sorted, key=lambda n: (-n.h)))
         if size == 0:
             return list_sorted2
-        if size == 1:
-            return list_sorted2.pop()
+
         return list_sorted2[len(list_sorted2)-(min(size, len(list_sorted2))):]
 
     return ls
@@ -93,49 +92,7 @@ def find_best_neigbhors(list_of_nodes, heuristic, checked=[], size=0):
 
 def hill_climbing(start, goal):
 
-    max_sideways_move = 30
-    sideways_move = 0
-    number_of_restart = 0
-    checked = []
-    start_node = Node(start, None)
-    goal_node = Node(goal, None)
-    heuristic = clculateHeuristics(goal_node.country)
-
-    current_node = start_node
-
-    while number_of_restart <= 5 and current_node:
-        if current_node == goal_node:
-            return recreate_path(current_node, start_node)
-
-        checked.append(current_node.name)
-        best_neigbhor = find_best_neigbhors([current_node], heuristic, checked, size=1)
-
-        if not best_neigbhor:
-            number_of_restart += 1
-            sideways_move = 0
-            current_node = find_best_neigbhors([start_node], heuristic, checked, size=1)
-
-        else:
-            if best_neigbhor.h < current_node.h:
-                current_node = best_neigbhor
-                sideways_move = 0
-
-            elif best_neigbhor.h == current_node.h: #check if KATEF
-                sideways_move += 1
-
-                if sideways_move <= max_sideways_move:
-                    current_node = best_neigbhor
-                else:
-                    number_of_restart += 1
-                    sideways_move = 0
-                    current_node = find_best_neigbhors([start_node], heuristic, checked, size=1)
-
-            else:
-                number_of_restart += 1
-                sideways_move = 0
-                current_node = find_best_neigbhors([start_node], heuristic, checked, size=1)
-
-    return None, None
+    return beam_search(start, goal, k=1)
 
 def simulated_annealing(start, goal):
     t_max=100
@@ -195,9 +152,10 @@ def beam_search(start, goal, k=3):
     if start_node==goal_node:
         return recreate_path(start_node, start_node)
     checked.append(start_node.name)
+
     current_nodes = find_best_neigbhors([start_node], heuristic, checked, size=k)
 
-    while number_of_restart <= 5 and len(current_nodes) != 0:
+    while number_of_restart <= 5 and current_nodes:
 
         if goal_node in current_nodes:
             for node in current_nodes:
@@ -209,14 +167,15 @@ def beam_search(start, goal, k=3):
 
         best_k_neighbhors = find_best_neigbhors(current_nodes, heuristic, checked, size=k)
 
-        if len(best_k_neighbhors) == 0:
+        if not best_k_neighbhors:
             number_of_restart += 1
+            sideways_move = 0
             current_nodes = find_best_neigbhors([start_node], heuristic, checked, size=k)
-            continue
 
         else:
             current_nodes_temp=[]
             for node in best_k_neighbhors:
+
                 if node.h<node.parent.h:
                     current_nodes_temp.append(node)
 
@@ -225,13 +184,12 @@ def beam_search(start, goal, k=3):
                     if sideways_move <= max_sideways_move:
                         current_nodes_temp.append(node)
 
-
-
-                checked.append(node.parent.name)
-
-
-
-            current_nodes = best_k_neighbhors
+            if current_nodes_temp:
+                current_nodes = current_nodes_temp
+            else:
+                number_of_restart +=1
+                sideways_move = 0
+                current_nodes = find_best_neigbhors([start_node], heuristic, checked, size=k)
 
     return None, None
 
@@ -465,9 +423,8 @@ if __name__ == "__main__":
     starting_locations = ["Washington County, UT", "Chicot County, AR", "Fairfield County, CT"]
     goal_locations = ["San Diego County, CA", "Bienville Parish, LA", "Rensselaer County, NY"]
 
-    search_method = 4
+    search_method = 2
     detail_output = True
-
 
     find_path(starting_locations, goal_locations, search_method, detail_output)
 
